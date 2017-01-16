@@ -59,6 +59,7 @@ public static async Task Run(TimerInfo timer, TraceWriter log)
             continue;
 
         var fecPointTolerance = CalculateFecCupTolerance(tournament);
+        log.Info($"Time tolerance: {fecPointTolerance}");
         XDocument xFecPoints = await RefreshFileService.RefreshXmlFile(connectionString, "data", $"r/{(string)tournament["PermanentNumber"]}/fecpoints.xml", fecPointTolerance);
 
         JObject tournamentStat = CreateTournamentStat(tournament, xFecPoints, season, "PGA TOUR");
