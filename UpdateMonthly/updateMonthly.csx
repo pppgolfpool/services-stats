@@ -97,6 +97,9 @@ public static async Task Run(TimerInfo timer, TraceWriter log)
 
     await blobService.UploadBlobAsync("monthly", $"{season}/{tour}/poolie.json", data.ToString(Formatting.Indented));
     await blobService.UploadBlobAsync("monthly", $"{season}/{tour}/month.json", monthsStatsFile.ToString(Formatting.Indented));
+
+    var end = DateTime.UtcNow;
+    log.Info($"Execution time: {end - start}");
 }
 
 
