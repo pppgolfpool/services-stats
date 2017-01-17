@@ -50,6 +50,9 @@ public static async Task Run(TimerInfo timer, TraceWriter log)
 
         foreach (var tournament in tournaments)
         {
+            var entity = tournamentEntities.Single(x => (string)x["PermanentNumber"] == (string)tournament["Id"]);
+            if (!(bool)entity["Used"])
+                continue;
             var poolie = ((JArray)tournament["Poolies"]).SingleOrDefault(x => (string)x["UserId"] == (string)row["UserId"]);
             row["Rank"] = (int)poolie["ProjectedRank"];
             row["Change"] = (int)poolie["Rank"] - (int)poolie["ProjectedRank"];
@@ -62,7 +65,10 @@ public static async Task Run(TimerInfo timer, TraceWriter log)
                 row["Top10"] = Convert.ToInt32(row["Top10"] ?? 0) + (((int)poolie["ProjectedRank"]) <= 10 ? 1 : 0);
                 row["Cuts"] = Convert.ToInt32(row["Cuts"] ?? 0) + (((string)golfer["Status"]).ToLower() == "cut" ? 1 : 0);
                 row["PlusMinus"] = (int)row["Top5"] - (int)row["Cuts"];
-
+            }
+            else
+            {
+                row["Cuts"] = Convert.ToInt32(row["Cuts"] ?? 0) + 1;
             }
         }
 
