@@ -37,7 +37,7 @@ public static async Task Run(TimerInfo timer, TraceWriter log)
         ["season"] = "current",
         ["tour"] = tour,
         ["key"] = "state",
-        ["value"] = "dequeued,progressing,completed",
+        ["value"] = "dequeued,completed",
     }, "ServiceToken".GetEnvVar());
 
     dynamic profiles = await GetProfiles();
