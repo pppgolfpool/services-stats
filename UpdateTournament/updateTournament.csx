@@ -131,11 +131,58 @@ public static async Task Run(TimerInfo timer, TraceWriter log)
         var poolies = ((JArray)tournamentStat["Poolies"]).ToObject<List<JObject>>().OrderByDescending(x => (double)x["Points"] + (double)x["YtdPoints"]).ToList();
         tournamentStat["Poolies"] = JArray.FromObject(poolies);
 
-        await blobService.UploadBlobAsync("tournament", $"{season}/{(string)tournament["Tour"]}/{(string)tournament["Index"]}.json", tournamentStat.ToString(Formatting.Indented));
+        var data = RankStats(tournamentStat);
+
+        await blobService.UploadBlobAsync("tournament", $"{season}/{(string)tournament["Tour"]}/{(string)tournament["Index"]}.json", data.ToString(Formatting.Indented));
     }
 
     var end = DateTime.UtcNow;
     log.Info($"Execution time: {end - start}");
+}
+
+public static JObject RankStats(JObject data)
+{
+    // build ranks
+    int i = 0;
+    var golfers = (JArray)data["Golfers"];
+    var poolies = data["Poolies"].OrderByDescending(x => (double)x["YtdPoints"]).ToList();
+    foreach (JObject poolie in poolies)
+    {
+        if (i == 0)
+            poolie["Rank"] = i + 1;
+        else
+        {
+            poolie["Rank"] = (double)poolies[i - 1]["YtdPoints"] > (double)poolie["YtdPoints"] ? i + 1 : (int)poolies[i - 1]["Rank"];
+        }
+        i++;
+    }
+
+    i = 0;
+    poolies = data["Poolies"].OrderByDescending(x => (double)x["YtdPoints"] + (double)x["Points"]).ToList();
+    foreach (JObject poolie in poolies)
+    {
+        if (i == 0)
+            poolie["ProjectedRank"] = i + 1;
+        else
+        {
+            var prev = (double)poolies[i - 1]["YtdPoints"] + (double)poolies[i - 1]["Points"];
+            var now = (double)poolie["YtdPoints"] + (double)poolie["Points"];
+            poolie["ProjectedRank"] = prev > now ? i + 1 : (int)poolies[i - 1]["ProjectedRank"];
+        }
+        i++;
+
+        var nameSplit = ((string)poolie["Name"]).Split(new[] { ' ' });
+        poolie["LastFirst"] = nameSplit.Last() + ", " + nameSplit.First();
+        var golfer = golfers.SingleOrDefault(x => (string)poolie["Golfer"] == (string)x["Id"]);
+        if (golfer != null)
+        {
+            poolie["GolferName"] = (string)golfer["Name"];
+            poolie["GolferRank"] = (int)golfer["Rank"];
+            poolie["GolferTied"] = (string)golfer["Tied"];
+        }
+    }
+    data["Poolies"] = JArray.FromObject(poolies.OrderBy(x => (int)x["ProjectedRank"]));
+    return data;
 }
 
 public static TimeSpan CalculateFecCupTolerance(JObject tournament)
