@@ -1,11 +1,13 @@
 ﻿{
+  "scriptFile": "updateSeason.csx",
   "disabled": false,
   "bindings": [
     {
       "authLevel": "anonymous",
       "name": "req",
       "type": "httpTrigger",
-      "direction": "in"
+      "direction": "in",
+      "methods": ["post"]
     },
     {
       "name": "res",

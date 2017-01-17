@@ -1,6 +1,6 @@
 ﻿{
   "scriptFile": "updateTournament.csx",
-  "disabled": true,
+  "disabled": false,
   "bindings": [
     {
       "name": "timer",
