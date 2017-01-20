@@ -46,11 +46,14 @@ public static async Task Run(TimerInfo timer, TraceWriter log)
 
     foreach (var profile in profiles)
     {
+        var nameSplit = ((string)profile["Name"]).Split(new[] { ' ' });
+        var lastFirst = nameSplit.Last() + ", " + nameSplit.First();
         dynamic profileStats = JObject.FromObject(new
         {
             UserId = profile.UserId,
             Name = profile.Name,
             Email = profile.Email,
+            LastFirst = lastFirst,
             Points = new JArray(),
         });
         pooliesStatsFile.Add(profileStats);
@@ -81,11 +84,14 @@ public static async Task Run(TimerInfo timer, TraceWriter log)
             }
             ((JArray)poolieStats["Points"]).Add(monthPoints);
 
+            var nameSplit = ((string)poolieStats["Name"]).Split(new[] { ' ' });
+            var lastFirst = nameSplit.Last() + ", " + nameSplit.First();
             monthArray.Add(JObject.FromObject(new
             {
                 UserId = (string)poolieStats["UserId"],
                 Name = (string)poolieStats["Name"],
                 Email = (string)poolieStats["Email"],
+                LastFirst = lastFirst,
                 Points = monthPoints,
             }));
         }

@@ -44,9 +44,12 @@ public static async Task Run(TimerInfo timer, TraceWriter log)
     foreach (var profile in profiles)
     {
         var row = new JObject();
+        var nameSplit = ((string)profile["Name"]).Split(new[] { ' ' });
+        var lastFirst = nameSplit.Last() + ", " + nameSplit.First();
         row["UserId"] = (string)profile["UserId"];
         row["Name"] = (string)profile["Name"];
         row["Email"] = (string)profile["Email"];
+        row["LastFirst"] = lastFirst;
 
         foreach (var tournament in tournaments)
         {
