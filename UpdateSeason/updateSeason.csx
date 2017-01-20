@@ -85,8 +85,21 @@ public static async Task Run(TimerInfo timer, TraceWriter log)
     }
 
     var data = JArray.FromObject(((JArray)standings).OrderByDescending(x => (double)x["Points"]).ToList());
+    var lastTournament = tournamentEntities.OrderBy(x => (string)x["RowKey"]).LastOrDefault();
+    var lastTournamentName = "";
+    if(lastTournament != null)
+    {
+        lastTournamentName = (string)lastTournament["Name"];
+    }
+    var blob = JObject.FromObject( new
+    {
+        Season = season,
+        Week = week,
+        Tournament = lastTournamentName,
+        Poolies = data,
+    });
 
-    await blobService.UploadBlobAsync("season", $"{season}/PGA TOUR/season.json", data.ToString(Formatting.Indented));
+    await blobService.UploadBlobAsync("season", $"{season}/PGA TOUR/season.json", blob.ToString(Formatting.Indented));
 
     var end = DateTime.UtcNow;
     log.Info($"Execution Time: {end - start}");
