@@ -43,5 +43,10 @@ public static async Task<HttpResponseMessage> Run(HttpRequestMessage req, TraceW
 
     var file = await blobService.DownloadBlobAsync("season", $"{season}/{tour}/season.json");
     var data = JArray.Parse(file);
-    return req.CreateOk(data);
+    return req.CreateOk(new
+    {
+        Season = season,
+        Week = week,
+        Poolies = data,
+    });
 }
