@@ -37,7 +37,7 @@ public static async Task Run(TimerInfo timer, TraceWriter log)
         ["season"] = "current",
         ["tour"] = tour,
         ["key"] = "state",
-        ["value"] = "dequeued,completed",
+        ["value"] = "dequeued,completed,progressing",
     }, "ServiceToken".GetEnvVar());
 
     dynamic profiles = await GetProfiles();
@@ -46,6 +46,8 @@ public static async Task Run(TimerInfo timer, TraceWriter log)
 
     foreach (var profile in profiles)
     {
+        if (profile.isTest != null)
+            continue;
         var nameSplit = ((string)profile["Name"]).Split(new[] { ' ' });
         var lastFirst = nameSplit.Last() + ", " + nameSplit.First();
         dynamic profileStats = JObject.FromObject(new
@@ -72,17 +74,22 @@ public static async Task Run(TimerInfo timer, TraceWriter log)
         }
 
         var monthArray = new JArray();
-
         foreach (var poolieStats in pooliesStatsFile)
         {
             double monthPoints = 0.0d;
+            double ytdPoints = 0.0d;
             foreach (var statFile in statsFiles)
             {
                 var poolie = ((JArray)statFile["Poolies"]).FirstOrDefault(x => (string)x["UserId"] == (string)poolieStats["UserId"]);
-                if(poolie != null)
-                    monthPoints += (double)poolie["Points"];
+                if (poolie != null)
+                {
+                    ytdPoints = (double)poolie["YtdPoints"];
+                    if (((string)statFile["State"]) == "progressing")
+                        poolieStats["projectedPoints"] = ytdPoints + (double)poolie["Points"];
+                }
             }
-            ((JArray)poolieStats["Points"]).Add(monthPoints);
+            ((JArray)poolieStats["Points"]).Add(ytdPoints);
+
 
             var nameSplit = ((string)poolieStats["Name"]).Split(new[] { ' ' });
             var lastFirst = nameSplit.Last() + ", " + nameSplit.First();
