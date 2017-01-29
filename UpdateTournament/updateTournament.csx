@@ -100,6 +100,8 @@ public static async Task Run(TimerInfo timer, TraceWriter log)
 
         foreach (dynamic profile in profiles)
         {
+            if (profile.isTest != null)
+                continue;
             var pick = picks.FirstOrDefault(x => (string)x["UserId"] == (string)profile.UserId);
             var userId = profile.UserId;
             var email = profile.Email;
@@ -128,7 +130,7 @@ public static async Task Run(TimerInfo timer, TraceWriter log)
             }));
         }
 
-        var poolies = ((JArray)tournamentStat["Poolies"]).ToObject<List<JObject>>().OrderByDescending(x => (double)x["Points"] + (double)x["YtdPoints"]).ToList();
+        var poolies = ((JArray)tournamentStat["Poolies"]).ToObject<List<JObject>>().Where(x => x["isTest"] == null).OrderByDescending(x => (double)x["Points"] + (double)x["YtdPoints"]).ToList();
         tournamentStat["Poolies"] = JArray.FromObject(poolies);
 
         var data = RankStats(tournamentStat);
