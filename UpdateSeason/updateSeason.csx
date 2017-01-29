@@ -75,7 +75,8 @@ public static async Task Run(TimerInfo timer, TraceWriter log)
             }
         }
 
-        standings.Add(row);
+        if(profile["isTest"] == null)
+            standings.Add(row);
     }
 
     var maxPoints = standings.Max(x => (double)x["Points"]);
