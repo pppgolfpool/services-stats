@@ -86,6 +86,11 @@ public static async Task Run(TimerInfo timer, TraceWriter log)
                     ytdPoints = (double)poolie["YtdPoints"];
                     if (((string)statFile["State"]) == "progressing")
                         poolieStats["projectedPoints"] = ytdPoints + (double)poolie["Points"];
+                    if (((string)statFile["State"]) == "completed")
+                    {
+                        ytdPoints = ytdPoints + (double)poolie["Points"];
+                        poolieStats["projectedPoints"] = ytdPoints;
+                    }
                 }
             }
             ((JArray)poolieStats["Points"]).Add(ytdPoints);
