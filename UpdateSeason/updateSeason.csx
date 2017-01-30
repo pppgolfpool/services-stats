@@ -57,6 +57,8 @@ public static async Task Run(TimerInfo timer, TraceWriter log)
             if (!(bool)entity["Used"])
                 continue;
             var poolie = ((JArray)tournament["Poolies"]).SingleOrDefault(x => (string)x["UserId"] == (string)row["UserId"]);
+            if (poolie == null)
+                continue;
             row["Rank"] = (int)poolie["ProjectedRank"];
             row["Change"] = (int)poolie["Rank"] - (int)poolie["ProjectedRank"];
             row["Points"] = (double)poolie["YtdPoints"] + (double)poolie["Points"];
