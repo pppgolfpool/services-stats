@@ -47,7 +47,7 @@ public static async Task Run(TimerInfo timer, TraceWriter log)
     {
         if (!await blobService.BlobExists("tournament", $"{season}/{(string)tournament["Tour"]}/{(string)tournament["Index"]}.json"))
             tournament["calc"] = true;
-        else if ((string)tournament["State"] == "progressing" || (string)tournament["State"] == "completed")
+        else if ((bool)tournament["Used"] == true)
             tournament["calc"] = true;
     }
 
