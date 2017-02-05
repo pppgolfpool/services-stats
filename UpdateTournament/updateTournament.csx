@@ -256,6 +256,8 @@ public static JObject CreateTournamentStat(dynamic tournament, XDocument xFecPoi
 
 public static string GetBackupString(XElement xElement, string element, string attribute, string backup)
 {
+    if (xElement.XPathSelectElement($".//{element}") == null)
+        return backup;
     string str = xElement.XPathSelectElement($".//{element}").Attribute($"{attribute}").Value;
     if (string.IsNullOrEmpty(str))
         str = backup;
@@ -315,7 +317,7 @@ public static JObject GenerateGolfer(dynamic pick, XDocument xFecPoints)
     double points = Convert.ToDouble(strPoints);
     double money = Convert.ToDouble(strMoney);
     int rank = Convert.ToInt32(strRank);
-    string status = strStatus;
+    
     bool tied = strTied.ToLower().StartsWith("y");
     int round = Convert.ToInt32(strRound);
     int thru = Convert.ToInt32(strThru);
@@ -330,7 +332,7 @@ public static JObject GenerateGolfer(dynamic pick, XDocument xFecPoints)
         PickCount = 1,
         Points = points,
         Money = money,
-        Status = player.XPathSelectElement($".//event").Attribute("status").Value,
+        Status = strStatus,
         Rank = rank,
         Tied = tied,
         Round = round,
