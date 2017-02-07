@@ -78,22 +78,25 @@ public static async Task Run(TimerInfo timer, TraceWriter log)
         {
             double monthPoints = 0.0d;
             double ytdPoints = 0.0d;
+            double monthStart = -1.0d;
             foreach (var statFile in statsFiles)
             {
                 var poolie = ((JArray)statFile["Poolies"]).FirstOrDefault(x => (string)x["UserId"] == (string)poolieStats["UserId"]);
                 if (poolie != null)
                 {
                     ytdPoints = (double)poolie["YtdPoints"];
+                    if (monthStart < 0.0d)
+                        monthStart = ytdPoints;
                     if (((string)statFile["State"]) == "progressing")
-                        poolieStats["projectedPoints"] = ytdPoints + (double)poolie["Points"];
-                    if (((string)statFile["State"]) == "completed")
+                        poolieStats["projectedPoints"] = ytdPoints + (double)poolie["Points"] - monthStart;
+                    if (((string)statFile["State"]) == "completed" || ((string)statFile["State"]) == "dequeued")
                     {
                         ytdPoints = ytdPoints + (double)poolie["Points"];
-                        poolieStats["projectedPoints"] = ytdPoints;
+                        poolieStats["projectedPoints"] = ytdPoints - monthStart;
                     }
                 }
             }
-            ((JArray)poolieStats["Points"]).Add(ytdPoints);
+            ((JArray)poolieStats["Points"]).Add(ytdPoints - monthStart);
 
 
             var nameSplit = ((string)poolieStats["Name"]).Split(new[] { ' ' });
@@ -111,7 +114,7 @@ public static async Task Run(TimerInfo timer, TraceWriter log)
         monthsStatsFile.Add(JArray.FromObject(monthArray.OrderByDescending(x => (double)x["Points"])));
     }
 
-    var data = JArray.FromObject(pooliesStatsFile.OrderByDescending(x => ((JArray)x["Points"])[0]).ToList());
+    var data = JArray.FromObject(pooliesStatsFile.OrderByDescending(x => (double)x["projectedPoints"]).ToList());
 
     await blobService.UploadBlobAsync("monthly", $"{season}/{tour}/poolie.json", data.ToString(Formatting.Indented));
     await blobService.UploadBlobAsync("monthly", $"{season}/{tour}/month.json", monthsStatsFile.ToString(Formatting.Indented));
