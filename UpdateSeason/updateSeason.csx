@@ -68,7 +68,8 @@ public static async Task Run(TimerInfo timer, TraceWriter log)
                 row["Wins"] = Convert.ToInt32(row["Wins"] ?? 0) + (((int)poolie["GolferRank"]) == 1 ? 1 : 0);
                 row["Top5"] = Convert.ToInt32(row["Top5"] ?? 0) + (((int)poolie["GolferRank"]) <= 5 && ((int)poolie["GolferRank"]) > 0 ? 1 : 0);
                 row["Top10"] = Convert.ToInt32(row["Top10"] ?? 0) + (((int)poolie["GolferRank"]) <= 10 && ((int)poolie["GolferRank"]) > 0 ? 1 : 0);
-                row["Cuts"] = Convert.ToInt32(row["Cuts"] ?? 0) + (((string)golfer["Status"]).ToLower() == "cut" ? 1 : 0);
+                if (golfer["Status"] != null)
+                    row["Cuts"] = Convert.ToInt32(row["Cuts"] ?? 0) + (((string)golfer["Status"]).ToLower() == "cut" ? 1 : 0);
                 row["PlusMinus"] = (int)row["Top5"] - (int)row["Cuts"];
             }
             else
