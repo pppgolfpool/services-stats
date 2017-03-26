@@ -61,7 +61,19 @@ public static async Task Run(TimerInfo timer, TraceWriter log)
         var fecPointTolerance = CalculateFecCupTolerance(tournament);
         log.Info($"Time tolerance: {fecPointTolerance}");
         XDocument xFecPoints = await RefreshFileService.RefreshXmlFile(connectionString, "data", $"r/{(string)tournament["PermanentNumber"]}/fecpoints.xml", fecPointTolerance);
+        if(xFecPoints == null)
+        {
+            if ((string)tournament["State"] == "progressing")
+                xFecPoints = await RefreshFileService.RefreshXmlFile(connectionString, "data", $"r/current/fecpoints.xml", fecPointTolerance);
+            else throw new Exception("unable to get FecPoints.xml file.");
+        }
         XDocument xPlayerStats = await RefreshFileService.RefreshXmlFile(connectionString, "data", $"r/{(string)tournament["PermanentNumber"]}/player_stats.xml", fecPointTolerance);
+        if(xPlayerStats == null)
+        {
+            if ((string)tournament["State"] == "progressing")
+                xPlayerStats = await RefreshFileService.RefreshXmlFile(connectionString, "data", $"r/current/player_stats.xml", fecPointTolerance);
+            else throw new Exception("unable to get player_stats.xml file.");
+        }
 
         JObject tournamentStat = CreateTournamentStat(tournament, xFecPoints, season, "PGA TOUR");
         List<JObject> picks = await GetPicks((string)tournament["Index"]);
@@ -82,6 +94,18 @@ public static async Task Run(TimerInfo timer, TraceWriter log)
             if (!golferIds.Contains((string)pick["PlayerId"]))
             {
                 var golfer = GenerateGolfer(pick, xFecPoints, xPlayerStats);
+                if(golfer == null)
+                {
+                    golfer = JObject.FromObject(new
+                    {
+                        Name = (string)pick["PlayerName"],
+                        Id = (string)pick["PlayerId"],
+                        PickCount = 1,
+                        Rank = 0,
+                        Tied = false,
+                        IsMember = false,
+                    });
+                }
                 (tournamentStat["Golfers"] as JArray).Add(golfer);
                 golferIds.Add((string)pick["PlayerId"]);
             }
@@ -327,8 +351,26 @@ public static JObject GenerateGolfer(dynamic pick, XDocument xFecPoints, XDocume
     bool tied = strTied.ToLower().StartsWith("y");
     int round = Convert.ToInt32(strRound);
     int thru = Convert.ToInt32(strThru);
-    int parTotal = Convert.ToInt32(strParTotal);
-    int parDay = Convert.ToInt32(strParDay);
+    int parTotal = 0;
+    try
+    {
+        parTotal = Convert.ToInt32(strParTotal);
+    }
+    catch
+    {
+        parTotal = 0;
+    }
+
+    int parDay = 0;
+    try
+    {
+        parDay = Convert.ToInt32(strParDay);
+    }
+    catch
+    {
+        parDay = 0;
+    }
+
     int score = Convert.ToInt32(strScore);
 
     var golfer = JObject.FromObject(new
@@ -355,9 +397,15 @@ public static JObject GenerateGolfer(dynamic pick, XDocument xFecPoints, XDocume
 public static JObject GenerateNonMember(dynamic pick, XDocument xFecPoints, XDocument xPlayerStats)
 {
     XElement player = xPlayerStats.XPathSelectElement($"Players/Player[@PID='{pick.PlayerId}']");
-    string strRank = GetBackupString(player, ".//Stat[@PID='02675']", "RankAll", "0");
+    if (player == null)
+        return null;
+    string strRank = GetBackupString(player, ".//Stat[@StatId='02675']", "RankAll", "0");
 
     bool tied = strRank.Contains("T");
+    if (strRank.Contains("T"))
+    {
+        strRank = strRank.Replace("T", "");
+    }
     int rank = Convert.ToInt32(strRank);
 
     var golfer = JObject.FromObject(new
