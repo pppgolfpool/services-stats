@@ -64,14 +64,20 @@ public static async Task Run(TimerInfo timer, TraceWriter log)
         if(xFecPoints == null)
         {
             if ((string)tournament["State"] == "progressing")
+            {
                 xFecPoints = await RefreshFileService.RefreshXmlFile(connectionString, "data", $"r/current/fecpoints.xml", fecPointTolerance);
+                await blobService.UploadBlobAsync("data", $"r/{(string)tournament["PermanentNumber"]}/fecpoints.xml", xFecPoints.ToString());
+            }
             else throw new Exception("unable to get FecPoints.xml file.");
         }
         XDocument xPlayerStats = await RefreshFileService.RefreshXmlFile(connectionString, "data", $"r/{(string)tournament["PermanentNumber"]}/player_stats.xml", fecPointTolerance);
         if(xPlayerStats == null)
         {
             if ((string)tournament["State"] == "progressing")
+            {
                 xPlayerStats = await RefreshFileService.RefreshXmlFile(connectionString, "data", $"r/current/player_stats.xml", fecPointTolerance);
+                await blobService.UploadBlobAsync("data", $"r/{(string)tournament["PermanentNumber"]}/player_stats.xml", xPlayerStats.ToString());
+            }
             else throw new Exception("unable to get player_stats.xml file.");
         }
 
