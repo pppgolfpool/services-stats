@@ -116,6 +116,7 @@ public static async Task Run(TimerInfo timer, TraceWriter log)
                         Rank = 0,
                         Tied = false,
                         IsMember = false,
+                        Status = "active",
                     });
                 }
                 (tournamentStat["Golfers"] as JArray).Add(golfer);
@@ -186,6 +187,7 @@ public static async Task Run(TimerInfo timer, TraceWriter log)
                     if (golferId == customId)
                     {
                         golfer["Points"] = (double)custom["Points"];
+                        golfer["Rank"] = (int)custom["Rank"];
                     }
                 }
             }
@@ -416,6 +418,7 @@ public static JObject GenerateGolfer(dynamic pick, dynamic tournament, XDocument
                 Rank = 0,
                 Tied = false,
                 IsMember = false,
+                Status = "active"
             });
         }
         return nonMember;    
@@ -503,6 +506,7 @@ public static JObject GenerateNonMember(dynamic pick, XDocument xFecPoints, XDoc
         Rank = rank,
         Tied = tied,
         IsMember = false,
+        Status = "active"
     });
     return golfer;
 }
