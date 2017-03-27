@@ -81,6 +81,12 @@ public static async Task Run(TimerInfo timer, TraceWriter log)
             else throw new Exception("unable to get player_stats.xml file.");
         }
 
+        string fedExPointsDistString = await blobService.DownloadBlobAsync("data", "pool/fedexPointsDist.json");
+        JObject fedExPointsDist = JObject.Parse(fedExPointsDistString);
+
+        string customPointsString = await blobService.DownloadBlobAsync("data", "pool/customPoints.json");
+        JObject customPoints = JObject.Parse(customPointsString);
+
         JObject tournamentStat = CreateTournamentStat(tournament, xFecPoints, season, "PGA TOUR");
         List<JObject> picks = await GetPicks((string)tournament["Index"]);
 
@@ -99,7 +105,7 @@ public static async Task Run(TimerInfo timer, TraceWriter log)
         {
             if (!golferIds.Contains((string)pick["PlayerId"]))
             {
-                var golfer = GenerateGolfer(pick, xFecPoints, xPlayerStats);
+                var golfer = GenerateGolfer(pick, tournament, xFecPoints, xPlayerStats, fedExPointsDist, customPoints);
                 if(golfer == null)
                 {
                     golfer = JObject.FromObject(new
@@ -120,6 +126,68 @@ public static async Task Run(TimerInfo timer, TraceWriter log)
                 var existingGolfer = (JObject)((JArray)tournamentStat["Golfers"]).SingleOrDefault(x => (string)x["Id"] == (string)pick["PlayerId"]);
                 var pickCount = (int)existingGolfer["PickCount"];
                 existingGolfer["PickCount"] = ((int)existingGolfer["PickCount"]) + 1;
+            }
+        }
+
+        foreach(JObject golfer in (tournamentStat["Golfers"] as JArray))
+        {
+            if(golfer["Points"] == null)
+            {
+                var golferRank = (int)golfer["Rank"];
+                if(golferRank != 0)
+                {
+                    golfer["Points"] = 0;
+                    if((bool)golfer["Tied"] != true)
+                    {
+                        var points = GetPointsForTournamentRank((string)tournament["TournamentType"], (int)golfer["Rank"], fedExPointsDist);
+                        golfer["Points"] = points;
+                    }
+                    else
+                    {
+                        XElement standings = xFecPoints.XPathSelectElement("trn/standings");
+                        foreach(XElement plrElement in standings.Elements("plr"))
+                        {
+                            if(plrElement.Element("event") != null)
+                            {
+                                XElement eventElement = plrElement.Element("event");
+                                if(eventElement.Attribute("cPos") != null)
+                                {
+                                    var cpos = GetBackupString(plrElement, ".//event", "cPos", "0");
+                                    if(Convert.ToInt32(cpos) == golferRank)
+                                    {
+                                        var pointsString = GetBackupString(plrElement, ".//points", "event", "0");
+                                        double points = 0.00d;
+                                        try
+                                        {
+                                            points = Convert.ToDouble(pointsString);
+                                        }
+                                        catch
+                                        {
+                                            points = 0;
+                                        }
+                                        golfer["Points"] = points;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        foreach (JObject custom in (JArray)customPoints[season.ToString()])
+        {
+            if ((string)custom["TournamentId"] == (string)tournament["PermanentNumber"])
+            {
+                foreach (JObject golfer in (tournamentStat["Golfers"] as JArray))
+                {
+                    string golferId = (string)golfer["Id"];
+                    string customId = (string)custom["PlayerId"];
+                    if (golferId == customId)
+                    {
+                        golfer["Points"] = (double)custom["Points"];
+                    }
+                }
             }
         }
 
@@ -331,13 +399,26 @@ public static async Task<List<JObject>> GetProfiles()
     return list;
 }
 
-public static JObject GenerateGolfer(dynamic pick, XDocument xFecPoints, XDocument xPlayerStats)
+public static JObject GenerateGolfer(dynamic pick, dynamic tournament, XDocument xFecPoints, XDocument xPlayerStats, JObject fedExPointsDist, JObject customRanks)
 {
     XElement standings = xFecPoints.XPathSelectElement("trn/standings");
     XElement player = standings.XPathSelectElement($".//plr[@id='{pick.PlayerId}']");
     if (player == null)
     {
-        return GenerateNonMember(pick, xFecPoints, xPlayerStats);
+        JObject nonMember = GenerateNonMember(pick, xFecPoints, xPlayerStats);
+        if (nonMember == null)
+        {
+            nonMember = JObject.FromObject(new
+            {
+                Name = (string)pick["PlayerName"],
+                Id = (string)pick["PlayerId"],
+                PickCount = 1,
+                Rank = 0,
+                Tied = false,
+                IsMember = false,
+            });
+        }
+        return nonMember;    
     }
     string strPoints = GetBackupString(player, ".//points", "event", "0");
     string strMoney = GetBackupString(player, ".//money", "event", "0");
@@ -437,3 +518,32 @@ public static string PreviousTournamentIndex(JArray tournaments, int currentWeek
     }
     return string.Empty;
 }
+
+public static double GetPointsForTournamentRank(string tournamentType, int rank, JObject fedExPointsDist)
+{
+    var indexName = "";
+    if(tournamentType == "WGC")
+    {
+        indexName = "WGC";
+    }
+    else if(tournamentType == "MJR")
+    {
+        indexName = "Majors";
+    }
+    else if(tournamentType == "LRS" || tournamentType == "STD")
+    {
+        indexName = "PGATOUR";
+    }
+    else if(tournamentType == "PLF" || tournamentType == "PLS")
+    {
+        indexName = "Playoffs";
+    }
+
+    if (string.IsNullOrEmpty(indexName))
+    {
+        return 0;
+    }
+
+    JArray points = (JArray)fedExPointsDist[indexName];
+    return (double)points[rank - 1];
+} 
