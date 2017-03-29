@@ -32,6 +32,8 @@ public static async Task Run(TimerInfo timer, TraceWriter log)
     var tournamentEntities = await GetTournaments();
     var profiles = await GetProfiles();
 
+    var noCuts = new List<NoCut>(); //list of poolie id's with no cuts.
+
     List<JObject> tournaments = new List<JObject>();
     foreach (var t in tournamentEntities)
     {
@@ -80,6 +82,11 @@ public static async Task Run(TimerInfo timer, TraceWriter log)
 
         if(profile["isTest"] == null)
             standings.Add(row);
+
+        if(row["Cuts"] != null && (int)row["Cuts"] == 0)
+        {
+            noCuts.Add(new NoCut((string)row["UserId"], (string)row["LastFirst"]));
+        }
     }
 
     var maxPoints = standings.Max(x => (double)x["Points"]);
@@ -104,6 +111,9 @@ public static async Task Run(TimerInfo timer, TraceWriter log)
     });
 
     await blobService.UploadBlobAsync("season", $"{season}/PGA TOUR/season.json", blob.ToString(Formatting.Indented));
+
+    var jNoCuts = JArray.FromObject(noCuts);
+    await blobService.UploadBlobAsync("season", $"{season}/PGA TOUR/noCuts.json", jNoCuts.ToString(Formatting.Indented));
 
     var end = DateTime.UtcNow;
     log.Info($"Execution Time: {end - start}");
@@ -136,4 +146,16 @@ public static async Task<List<JObject>> GetProfiles()
         list.Add((JObject)item);
     }
     return list;
+}
+
+public class NoCut
+{
+    public NoCut(string userId, string lastFirst)
+    {
+        UserId = userId;
+        LastFirst = lastFirst;
+    }
+
+    public string UserId { get; }
+    public string LastFirst { get; }
 }
