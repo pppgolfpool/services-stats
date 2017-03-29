@@ -68,7 +68,18 @@ public static async Task Run(TimerInfo timer, TraceWriter log)
                 xFecPoints = await RefreshFileService.RefreshXmlFile(connectionString, "data", $"r/current/fecpoints.xml", fecPointTolerance);
                 await blobService.UploadBlobAsync("data", $"r/{(string)tournament["PermanentNumber"]}/fecpoints.xml", xFecPoints.ToString());
             }
-            else throw new Exception("unable to get FecPoints.xml file.");
+            else
+            {
+                if(xFecPoints == null) // if it's STILL null
+                {
+                    var xFecPointsString = await blobService.DownloadBlobAsync("data", $"r/{(string)tournament["PermanentNumber"]}/fecpoints.xml");
+                    xFecPoints = XDocument.Parse(xFecPointsString);
+                }
+            }
+            if(xFecPoints == null)
+            {
+                throw new Exception("unable to get FecPoints.xml file.");
+            }
         }
         XDocument xPlayerStats = await RefreshFileService.RefreshXmlFile(connectionString, "data", $"r/{(string)tournament["PermanentNumber"]}/player_stats.xml", fecPointTolerance);
         if(xPlayerStats == null)
@@ -78,7 +89,18 @@ public static async Task Run(TimerInfo timer, TraceWriter log)
                 xPlayerStats = await RefreshFileService.RefreshXmlFile(connectionString, "data", $"r/current/player_stats.xml", fecPointTolerance);
                 await blobService.UploadBlobAsync("data", $"r/{(string)tournament["PermanentNumber"]}/player_stats.xml", xPlayerStats.ToString());
             }
-            else throw new Exception("unable to get player_stats.xml file.");
+            else
+            {
+                if (xPlayerStats == null) // if it's STILL null
+                {
+                    var xPlayerStatsString = await blobService.DownloadBlobAsync("data", $"r/{(string)tournament["PermanentNumber"]}/player_stats.xml");
+                    xPlayerStats = XDocument.Parse(xPlayerStatsString);
+                }
+            }
+            if (xPlayerStats == null)
+            {
+                throw new Exception("unable to get player_stats.xml file.");
+            }
         }
 
         string fedExPointsDistString = await blobService.DownloadBlobAsync("data", "pool/fedexPointsDist.json");
